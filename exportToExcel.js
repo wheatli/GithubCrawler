@@ -1,5 +1,7 @@
 
 const Excel = require("exceljs");
+const chartistSvg = require('svg-chartist');
+const fs = require('fs');
 
 async function exportToExcel(filename, output_data) {
   let workbook = new Excel.Workbook();
@@ -50,14 +52,43 @@ async function exportToExcel(filename, output_data) {
       for (let [feature, value] of rep_map.entries()) {
         if (feature.endsWith("_history")) {
           row.getCell(feature).value = Array.from(value);
+          if (repo == "all_repo_data" || repo == "fabric" || repo == "FISCO-BCOS" || repo == "xuperchain") {
+            await exportHistorySvg(org, repo, feature, value);
+          }
         } else {
           row.getCell(feature).value = value;
         }
       }
-  }
+    }
   }
   
   await workbook.csv.writeFile(filename, options);
+  return;
+}
+
+async function exportHistorySvg(org, repo, feature, map) {
+  var series = [];
+  series.push(Array.from(map.values()));
+  const data = {
+    labels : Array.from(map.keys()),
+    series : series
+  };
+
+  const options = {
+    fullWidth: true,
+    chartPadding: {
+      right: 40
+    }
+  }
+  
+  const opts = {
+      options: options
+  }
+
+  let filename = "./svg/"+org+"#"+repo+"#"+feature+".html";
+  var html = await chartistSvg('line', data, opts);
+  fs.writeFileSync(filename, html);
+
   return;
 }
 

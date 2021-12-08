@@ -16,7 +16,7 @@ async function getStarHistory(owner_name, repo_name) {
         page: page_index,
       });
       if (ret.status == 403 || ret.status == 500) {
-        await waitOctokit(octokit);
+        await myOctokit.waitOctokit(octokit);
         continue;
       } else if (ret.status == 204) {
         return undefined;
@@ -26,8 +26,9 @@ async function getStarHistory(owner_name, repo_name) {
         );
       }
     } catch (e) {
-      console.warn(e);
-      return undefined;
+      //console.warn(e);
+      await myOctokit.waitOctokit(octokit);
+      continue;
     }
 
     var stargazers = ret.data;

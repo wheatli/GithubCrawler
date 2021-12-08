@@ -2,12 +2,13 @@
 const handleOrg = require("./handleOrg.js");
 const exportToExcel = require("./exportToExcel.js");
 
+const myOctokit = require("./myOctokit.js");
+
 
 const orgs = [
     "FISCO-BCOS",
     "bcosorg",
     "WeBankBlockchain",
-    "WeBankFinTech",
     "hyperledger",
     "xuperchain",
 ];
@@ -29,6 +30,37 @@ async function mergeHistoryMap(map1, map2) {
         }
     }
     return new Map([...map].sort());
+}
+
+async function mineOrgData(data) {
+    for (let org of orgs) {
+        var dedup_contributors = new Set();
+        var all_repo_data = new Map();
+        for (let [_, rep_map] of data.get(org).entries()) {
+            for(let [feature, value] of rep_map.entries()) {
+                if (feature == "contributors_list") {
+                    for (let contributor of value) {
+                        dedup_contributors.add(contributor);
+                    }
+                } else if (!all_repo_data.has(feature)) {
+                    all_repo_data.set(feature, value);
+                } else {
+                    var raw_value = all_repo_data.get(feature);
+                    if (feature.endsWith("_history")) {
+                        var new_value = await mergeHistoryMap(raw_value, value);
+                        all_repo_data.set(feature, new_value);
+                    } else {
+                        all_repo_data.set(feature, raw_value+value);
+                    }
+                }
+            }
+        }
+        var dedup_list = Array.from(dedup_contributors);
+        all_repo_data.set("contributors_count", dedup_list.length);
+        all_repo_data.set("contributors_list", dedup_list);
+
+        data.get(org).set("all_repo_data", all_repo_data);
+    }
 }
 
 async function mineFabricData(data) {
@@ -74,7 +106,10 @@ async function mineWeBankData(data) {
         if (!(org == "bcosorg" || org == "FISCO-BCOS" || org == "WeBankFinTech" || org == "WeBankBlockchain")) {
             continue;
         }
-        for (let [_, repo_map] of org_map.entries()) {
+        for (let [repo, repo_map] of org_map.entries()) {
+            if (repo != "all_repo_data") {
+                continue;
+            }
             for (let [feature, value] of repo_map.entries()) {
                 if (feature == "contributors_list") {
                     for (let contributor of value) {
@@ -107,6 +142,8 @@ async function startCrawler() {
         var org_data = await handleOrg.handleOrg(org);
         output_data.set(org, org_data);
     }
+
+    await mineOrgData(output_data);
 
     var fabric_data = await mineFabricData(output_data);
     var webank_data = await mineWeBankData(output_data);

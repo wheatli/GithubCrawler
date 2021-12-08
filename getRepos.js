@@ -1,6 +1,5 @@
 var myOctokit = require("./myOctokit.js");
 
-const weRepos = ["WeIdentity", "WeEvent", "WeBASE"];
 function checkRepo(repo) {
   // omits forked repo
   if (repo.fork) {
@@ -11,23 +10,6 @@ function checkRepo(repo) {
   if (repo.private) {
     console.warn(`omit private repo: ${repo.name}`);
     return false;    
-  }
-
-  if (repo.name == "netty-tcnative-sm") {
-    console.warn(`omit repo: ${repo.name}`);
-    return false;
-  }
-
-  if (repo.owner.login == "WeBankFinTech") {
-    // Only contains repos in `weRepos`
-    for (let weRepo of weRepos) {
-      if (repo.name.startsWith(weRepo)) {
-        return true;
-      }
-    }
-
-    console.warn(`omit not-blockchain repo: ${repo.name}`);
-    return false;
   }
 
   return true;
@@ -48,7 +30,7 @@ async function getRepos(org_name) {
         page: page_index,
       });
       if (ret.status == 403 || ret.status == 500) {
-        await waitOctokit(octokit);
+        await myOctokit.waitOctokit(octokit);
         continue;
       } else if (ret.status == 204) {
         return undefined;
@@ -58,8 +40,9 @@ async function getRepos(org_name) {
         );
       }
     } catch (e) {
-      console.warn(e);
-      return undefined;
+      //console.warn(e);
+      await myOctokit.waitOctokit(octokit);
+      continue;
     }
 
     for (var repo of ret.data) {

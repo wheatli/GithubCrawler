@@ -55,35 +55,23 @@ async function handleRepo(repo) {
 
 async function handleOrg(org_name) {
   console.info("handleOrg: " + org_name);
-  var promises = [];
+  //var promises = [];
   var org_data = new Map();
   var repo_list = await getRepos.getRepos(org_name);
   if (repo_list != undefined) {
     for (let repo of repo_list) {
-      promises.push(
+      /*promises.push(
         handleRepo(repo).then((repo_data) => {
           org_data.set(repo.name, repo_data);
         })
-      );
+      );*/
+      console.info("handleRepo: " + repo.name);
+      var repo_data = await handleRepo(repo);
+      org_data.set(repo.name, repo_data);
     }
   }
 
-  await Promise.all(promises);
-
-  // dedup contributors
-  var dedup_set = new Set();
-  for (let [_, repo_data] of org_data.entries()) {
-    if (repo_data.has("contributors_list")) {
-      for (let contributor of repo_data.get("contributors_list")) {
-        dedup_set.add(contributor);
-      }
-    }
-  }
-  var dedup_list = Array.from(dedup_set);
-
-  org_data.set("all_repo_dedup", new Map());
-  org_data.get("all_repo_dedup").set("contributors_count", dedup_list.length);
-  org_data.get("all_repo_dedup").set("contributors_list", dedup_list);
+  //await Promise.all(promises);
 
   return org_data;
 }
